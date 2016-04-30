@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html id="colourspace"  style="background-color:white; color:black">
+    <head>
+        <title>Alarm Clock</title>
+        <script>
+            var alarmcheckinterval = setInterval(alarmcheck, 1000), s = "notintime", n = "notintime";
+            var convertNumeralToWeekday = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+            var convertNumeralToColour = ["black","white","blue","cyan","green","red","orange","purple","gray"]
+            var sessionID = location.search;
+
+            function setLStorage(cname, cvalue) {
+                localStorage.setItem(sessionID+cname,cvalue);
+            }
+            
+            function getLStorage(cname) {
+                if(localStorage.getItem(sessionID+cname)==null)return "";
+                else return localStorage.getItem(sessionID+cname);
+            }
+            
+            function deleteLStorage(cname) {
+                localStorage.removeItem(sessionID+cname);
+            }
+            
+            function loadsettings(){
+                document.getElementById("foreground").selectedIndex=0;
+                document.getElementById("background").selectedIndex=1;
+                var time = getLStorage("alarmtrigger"), foreground=getLStorage("foreground"), background=getLStorage("background");
+                if(time!=""){
+                    s = time;
+                    n = s;
+                    document.getElementById("timeinput").value=time;
+                    document.getElementById("repeat").value="Reoccuring";
+                    
+                    document.getElementById("alarmschedule").style.display="inline";
+                    for(var i=0; i<7; i++){
+                        if(getLStorage(convertNumeralToWeekday[i])==1)document.getElementById(convertNumeralToWeekday[i]).checked=true;
+                        else document.getElementById(convertNumeralToWeekday[i]).checked=false;
+                    }
+                }
+                if(foreground!=""){
+                    document.getElementById("foreground").selectedIndex=foreground;
+                    document.getElementById("colourspace").style.color=convertNumeralToColour[foreground];
+                }
+                if(background!=""){
+                    document.getElementById("background").selectedIndex=background;
+                    document.getElementById("colourspace").style.backgroundColor=convertNumeralToColour[background];
+                }
+            }
+            
+            function savesettings(){
+                setLStorage("alarmtrigger",s);
+                for(var i=0; i<7; i++){
+                        if(document.getElementById(convertNumeralToWeekday[i]).checked)setLStorage(convertNumeralToWeekday[i],1);
+                        else setLStorage(convertNumeralToWeekday[i],0);
+                }
+                setLStorage("foreground",document.getElementById("foreground").selectedIndex);
+                setLStorage("background",document.getElementById("background").selectedIndex);
+            }
+            
+            function deletesettings(){
+                deleteLStorage("alarmtrigger");
+                for(var i=0; i<7; i++)deleteLStorage(convertNumeralToWeekday[i]);
+            }
+            
+            function alarmcheck() {
+                var d = new Date();
+                document.getElementById("currenttime").innerHTML=d.toTimeString().substr(0,8);
+                document.getElementById("currentdate").innerHTML=d.toDateString();
+                if(d.toTimeString().indexOf(s)>-1 && ((document.getElementById("repeat").value=="Isolated") || (document.getElementById(convertNumeralToWeekday[d.getDay()]).checked) )){
+                    alarmstart();
+                }
+                delete d;
+            }
+            
+            function alarmset(){
+               s = document.getElementById("timeinput").value;
+               if(s.length<8)s+=":00";
+               document.getElementById("colourspace").style.color=convertNumeralToColour[document.getElementById("foreground").selectedIndex];
+               document.getElementById("colourspace").style.backgroundColor=convertNumeralToColour[document.getElementById("background").selectedIndex];
+               if(document.getElementById("repeat").value=="Reoccuring")savesettings();
+            }
+            
+            function alarmreset(){
+                s = "notintime";
+                for(var i=0; i<7; i++)document.getElementById(convertNumeralToWeekday[i]).checked=false;
+                document.getElementById("timeinput").value="";
+                document.getElementById("repeat").value="Isolated"
+                document.getElementById("alarmschedule").style.display="none";
+                deletesettings();
+            }
+            
+            function alarmstart(){
+                n = s;
+                document.getElementById("alarmsound").play();
+                document.getElementById("alarmnotification").style.display="inline";
+            }
+            
+            function alarmstop(){
+                s = n;
+                document.getElementById("alarmsound").load();
+                document.getElementById("alarmnotification").style.display="none";
+                if(document.getElementById("repeat").value=="Isolated")alarmreset();
+                document.getElementById("alarmsnoozemsg").innerHTML="";
+            }
+            
+            function alarmsnooze(){
+                document.getElementById("alarmsound").load();
+                var h=s.split(":");
+                var hh = parseInt(h[0]),mm=parseInt(h[1]);
+                mm+=15;
+                if(mm>60){
+                    mm%=60;
+                    hh++;
+                }
+                if(hh>=24){
+                    hh%=24;
+                }
+                h[0]="";
+                if(hh<10)h[0]="0";
+                h[0]+=hh.toString();
+                h[1]="";
+                if(mm<10)h[1]="0";
+                h[1]+=mm.toString();
+                s=h[0]+":"+h[1]+":"+h[2];
+                delete h,hh,mm;
+                document.getElementById("alarmsnoozemsg").style.display="inline";
+                document.getElementById("alarmnotification").style.display="none";
+            }
+            
+            function togglereoccur(){
+                if(document.getElementById("repeat").value=="Reoccuring"){
+                    alarmreset();
+                }
+                else { 
+                    document.getElementById("repeat").value="Reoccuring"
+                    document.getElementById("alarmschedule").style.display="inline";
+                }
+            }
+        </script>
+        <style>
+            * 
+            {
+                background-color:inherit;
+                color:inherit;
+                border:none;
+                text-align:center;
+            }
+            input[type="checkbox"] {
+                display:none;
+            }
+            input[type="checkbox"] + label span {
+                padding : 0.25em 0.25em 0.25em 0.25em;
+            }
+            input[type="checkbox"]:checked + label span {
+                border:1px solid;
+                
+            }
+            #pagination
+            {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+            }
+             #currenttime{
+                font-size:4em;
+            }
+        </style>
+    </head>
+    
+    <body onload="loadsettings()">
+        <audio hidden id="alarmsound">
+            <source src="alarme.m4a" type="audio/mpeg"/>
+        </audio>
+        <div id="theming"> 
+            <select id="foreground" onchange="alarmset()">
+                <option>Black</option>
+                <option>White</option>
+                <option>Blue</option>
+                <option>Cyan</option>
+                <option>Green</option>
+                <option>Red</option>
+                <option>Orange</option>
+                <option>Purple</option>
+                <option>Gray</option>
+            </select>
+            <select id="background" onchange="alarmset()">
+                <option>Black</option>
+                <option>White</option>
+                <option>Blue</option>
+                <option>Cyan</option>
+                <option>Green</option>
+                <option>Red</option>
+                <option>Orange</option>
+                <option>Purple</option>
+                <option>Gray</option>
+            </select>
+        </div>
+        <div id="pagination">
+            <span id="alarmnotification" style="display:none">
+                <span>Alarm ringing!!!</span>
+                <input type="button" onclick="alarmstop()" value="Stop"  />
+                <input type="button" onclick="alarmsnooze()" value="Snooze"  />
+                <br /> <br />
+            </span>
+            
+            <span id="alarmsnoozemsg" style="display:none">
+                Snoozing for 15 minutes.  <input type="button" onclick="alarmstop()" value="Stop"  /> <br /> <br />
+            </span>
+            
+            <span id="currenttime"></span><br />
+            <span id="currentdate"></span><br /><br />
+            
+            <input type="time" step="1" id="timeinput" onchange="alarmset()"/>
+            <input type="button" onclick="togglereoccur()" value="Isolated" id="repeat"  />
+            <input type="button" onclick="alarmreset()" value="Reset"  />
+            
+            <br /><br />
+            
+            <div id="alarmschedule" style="display:none">
+                <input type="checkbox" id="sunday"  /><label   for="sunday" onmouseout="alarmset()"><span>SUN</span></label>
+                <input type="checkbox" id="monday"  /><label   for="monday" onmouseout="alarmset()"><span>MON</span></label>
+                <input type="checkbox" id="tuesday"  /><label   for="tuesday" onmouseout="alarmset()"><span>TUE</span></label>
+                <input type="checkbox" id="wednesday"  /><label   for="wednesday" onmouseout="alarmset()"><span>WED</span></label>
+                <input type="checkbox" id="thursday"  /><label   for="thursday" onmouseout="alarmset()"><span>THU</span></label>
+                <input type="checkbox" id="friday"  /><label   for="friday" onmouseout="alarmset()"><span>FRI</span></label>
+                <input type="checkbox" id="saturday"  /><label   for="saturday" onmouseout="alarmset()"><span>SAT</span></label><br />
+            </div>
+        </div>
+    </body>
+</html>
